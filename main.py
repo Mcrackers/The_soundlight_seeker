@@ -41,9 +41,12 @@ async def get_tracks(page: int = 0, per_page: int = 10):
 
 @app.get("/tracks/composers")
 async def composer_songs(composer_name: str):
+    track_list = []
     comp_data = app.db_connection.execute('SELECT Composer FROM tracks WHERE Composer = ?', (composer_name,)).fetchall()
     if comp_data == []:
         raise HTTPException(status_code=404, detail={'error': 'There is no such composer'})
     tracks_data = app.db_connection.execute('SELECT Name FROM tracks WHERE Composer = ? ORDER BY Name', (composer_name,)).fetchall()
-    return tracks_data
+    for song in tracks_data:
+        track_list += song
+    return track_list
 
