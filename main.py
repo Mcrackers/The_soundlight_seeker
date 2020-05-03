@@ -1,6 +1,6 @@
 import sqlite3
-from fastapi import FastAPI, HTTPException
-
+from fastapi import FastAPI, HTTPException, Response
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -39,6 +39,7 @@ async def get_tracks(page: int = 0, per_page: int = 10):
                           "UnitPrice": tracks_data[i][8]}
     return tracks_data
 
+'''Create /tracks/composers page where the songs of the given composer are listed by Name'''
 @app.get("/tracks/composers")
 async def composer_songs(composer_name: str):
     track_list = []
@@ -50,3 +51,35 @@ async def composer_songs(composer_name: str):
         track_list += song
     return track_list
 
+
+class add_album_request(BaseModel):
+    title: str
+    artist_id: int
+
+
+class album_response(BaseModel):
+    AlbumId: int
+    Title: str
+    ArtistId: int
+
+
+'''Create /albums page where new album of the given composer is added'''
+@app.post("/albums", response_model=album_response)
+async def add_album(request: add_album_request, response: Response):
+    artist = app.db_connection.execute('SELECT ArtistId FROM albums WHERE ArtistId = ?', (request.artist_id,)).fetchone()
+    if artist:
+        new_title = app.db_connection.execute('INSERT INTO albums (Title, ArtistId) VALUES (?,?)', (request.title, request.artist_id))
+        app.db_connection.commit()
+        new_albumid = new_title.lastrowid
+        response.status_code = 201
+        return album_response(AlbumId = new_albumid, Title = request.title, ArtistId = request.artist_id)
+    else:
+        raise HTTPException(status_code=404, detail={'error': 'There is no such artistid!'})
+
+
+'''Create /albums/{album_id page where album is shown when album_id is typed'''
+@app.get("/albums/{album_id}")
+async def check_album(album_id: int):
+    app.db_connection.row_factory = sqlite3.Row
+    album_data = app.db_connection.execute('SELECT AlbumId, Title, ArtistId FROM albums WHERE AlbumId = ?', (album_id,)).fetchone()
+    return album_response(AlbumId = album_data['AlbumId'], Title = album_data['Title'], ArtistId = album_data['ArtistId'])
