@@ -83,3 +83,61 @@ async def check_album(album_id: int):
     app.db_connection.row_factory = sqlite3.Row
     album_data = app.db_connection.execute('SELECT AlbumId, Title, ArtistId FROM albums WHERE AlbumId = ?', (album_id,)).fetchone()
     return album_response(AlbumId = album_data['AlbumId'], Title = album_data['Title'], ArtistId = album_data['ArtistId'])
+
+
+class customer_data_request(BaseModel):
+    company: str = None
+    address: str = None
+    city: str = None
+    state: str = None
+    country: str = None
+    postalcode: str = None
+    fax: str = None
+
+
+class customer_data(BaseModel):
+    CustomerId: int
+    FirstName: str = None
+    LastName: str = None
+    Company: str = None
+    Address: str = None
+    City: str = None
+    State: str = None
+    Country: str = None
+    PostalCode: str = None
+    Phone: str = None
+    Fax: str = None
+    Email: str = None
+    SupportRepId: int
+
+
+
+'''Create /customers/{customer_id} page where customer data might be edited'''
+@app.put("/customers/{customer_id}", response_model=customer_data)
+async def update_customer(customer_id: int, request: customer_data_request, response: Response):
+    customer = app.db_connection.execute('SELECT CustomerId FROM customers WHERE CustomerId = ?', (customer_id,)).fetchone()
+    data_for_change = dict(request)
+    shrinked_data_for_change = {key: value for key, value in data_for_change.items() if value is not None}
+    if customer:
+        for key in shrinked_data_for_change:
+            app.db_connection.execute('UPDATE customers SET ' + str(key)+ ' = ? WHERE CustomerId = ?', (shrinked_data_for_change[key], customer_id))
+        app.db_connection.commit()
+        app.db_connection.row_factory = sqlite3.Row
+        cust_data = app.db_connection.execute('SELECT * FROM customers WHERE CustomerId = ?', (customer_id,)).fetchone()
+        print(list(cust_data))
+        response = customer_data(CustomerId = cust_data['CustomerId'],
+                                FirstName = cust_data['FirstName'],
+                                LastName = cust_data['LastName'],
+                                Company = cust_data['Company'],
+                                Address = cust_data['Address'],
+                                City = cust_data['City'],
+                                State = cust_data['State'],
+                                Country = cust_data['Country'],
+                                PostalCode = cust_data['PostalCode'],
+                                Phone = cust_data['Phone'],
+                                Fax = cust_data['Fax'],
+                                Email = cust_data['Email'],
+                                SupportRepId = cust_data['SupportRepId'])
+        return response
+    else:
+        raise HTTPException(status_code=404, detail={'error': 'There is no such customer!'})
