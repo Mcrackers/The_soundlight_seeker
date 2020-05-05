@@ -114,7 +114,7 @@ class customer_data(BaseModel):
 
 '''Create /customers/{customer_id} page where customer data might be edited'''
 @app.put("/customers/{customer_id}", response_model=customer_data)
-async def update_customer(customer_id: int, request: customer_data_request, response: Response):
+async def update_customer(customer_id: int, request: customer_data_request):
     customer = app.db_connection.execute('SELECT CustomerId FROM customers WHERE CustomerId = ?', (customer_id,)).fetchone()
     data_for_change = dict(request)
     shrinked_data_for_change = {key: value for key, value in data_for_change.items() if value is not None}
@@ -141,3 +141,25 @@ async def update_customer(customer_id: int, request: customer_data_request, resp
         return response
     else:
         raise HTTPException(status_code=404, detail={'error': 'There is no such customer!'})
+
+
+'''Create /sales page where customer statistics are presented'''
+@app.get("/sales")
+async def customers_statistics(category: str = None):
+    if category == "customers":
+        cust_data = app.db_connection.execute('''SELECT c.CustomerId, c.Email, c.Phone, ROUND(SUM(i.Total), 2) 
+                                                 FROM customers AS c
+                                                 INNER JOIN invoices AS i ON i.CustomerId = c.CustomerId
+                                                 GROUP BY c.CustomerId 
+                                                 ORDER BY SUM(i.Total) DESC, c.CustomerId ASC
+                                                 ''').fetchall()
+        for i in range(len(cust_data)):
+            cust_data[i] = {
+                            "CustomerId": cust_data[i][0],
+                            "Email": cust_data[i][1],
+                            "Phone": cust_data[i][2],
+                            "Sum": cust_data[i][3]
+                           }
+        return cust_data
+    else:
+        raise HTTPException(status_code=404, detail={'error': 'There is no such category!'})
