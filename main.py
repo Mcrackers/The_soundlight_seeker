@@ -152,13 +152,26 @@ async def customers_statistics(category: str = None):
                                                  INNER JOIN invoices AS i ON i.CustomerId = c.CustomerId
                                                  GROUP BY c.CustomerId 
                                                  ORDER BY SUM(i.Total) DESC, c.CustomerId ASC
-                                                 ''').fetchall()
+                                              ''').fetchall()
         for i in range(len(cust_data)):
             cust_data[i] = {
                             "CustomerId": cust_data[i][0],
                             "Email": cust_data[i][1],
                             "Phone": cust_data[i][2],
                             "Sum": cust_data[i][3]
+                           }
+        return cust_data
+    elif category == "genres":
+        cust_data = app.db_connection.execute('''SELECT g.Name, COUNT(g.GenreId) FROM genres AS g
+                                                 JOIN tracks AS t ON t.GenreId = g.GenreId
+                                                 JOIN invoice_items AS i ON i.TrackId = t.TrackId
+                                                 GROUP BY g.GenreId
+                                                 ORDER BY COUNT(g.GenreId) DESC, g.Name ASC
+                                              ''').fetchall()
+        for i in range(len(cust_data)):
+            cust_data[i] = {
+                            "Name": cust_data[i][0],
+                            "Sum": cust_data[i][1]
                            }
         return cust_data
     else:
