@@ -151,7 +151,7 @@ async def customers_statistics(category: str = None):
                                                  FROM customers AS c
                                                  INNER JOIN invoices AS i ON i.CustomerId = c.CustomerId
                                                  GROUP BY c.CustomerId 
-                                                 ORDER BY SUM(i.Total) DESC, c.CustomerId ASC
+                                                 ORDER BY ROUND(SUM(i.Total), 2) DESC, c.CustomerId ASC
                                               ''').fetchall()
         for i in range(len(cust_data)):
             cust_data[i] = {
